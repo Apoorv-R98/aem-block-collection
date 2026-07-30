@@ -1,9 +1,16 @@
-# Your Project's Title...
-Your project's description...
+# aem-block-collection (EDS Search Blocks fork)
+Frontend blocks for the EDS Semantic Search / Content AI Search initiative (Jira GRANITE-71249). Phase 1 of 3: frontend only, backed by local mock data.
 
 ## Environments
 - Preview: https://main--{repo}--{owner}.aem.page/
 - Live: https://main--{repo}--{owner}.aem.live/
+
+## Blocks added in this fork
+
+- `blocks/semantic-search` — search input + result cards/list, currently backed by `mock-results.json`. Authoring fields: `Placeholder`, `Results Size`, `Results Layout` (`card`/`list`), `Id`.
+- `blocks/content-ai-search` — search input + generative-answer panel with source chips, currently backed by `mock-answer.json`. Authoring fields: `Placeholder`, `Gen Search Enabled By Default`, `Gen Search Toggle Visible`, `Gen Search Error Fallback`, `Disclaimer Text`, `Id`.
+
+Both blocks are Phase 1 of a 3-phase plan (frontend / backend / integration) — see `aem-core-wcm-components`'s `docs/superpowers/specs/2026-07-30-eds-content-ai-search-blocks-design.md` for the full design. Neither block talks to a real backend yet; the mock JSON fixtures will be replaced with real Content AI-backed endpoints once the backend architecture (Phase 2) is decided.
 
 ## Documentation
 

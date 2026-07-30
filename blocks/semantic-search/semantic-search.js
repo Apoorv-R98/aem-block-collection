@@ -85,8 +85,8 @@ function showError(resultsEl, message) {
 export default function decorate(block) {
   const config = readBlockConfig(block);
   const placeholder = config.placeholder || 'Search…';
-  const resultsSize = parseInt(config.resultsSize, 10) || DEFAULT_RESULTS_SIZE;
-  const resultsLayout = config.resultsLayout === 'list' ? 'list' : 'card';
+  const resultsSize = parseInt(config['results-size'], 10) || DEFAULT_RESULTS_SIZE;
+  const resultsLayout = config['results-layout'] === 'list' ? 'list' : 'card';
   const { id } = config;
 
   block.innerHTML = '';

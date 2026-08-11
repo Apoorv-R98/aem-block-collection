@@ -37,12 +37,18 @@ function renderAnswer(container, data, disclaimerText) {
 
     hits.forEach((hit) => {
       const meta = hit.metadata || {};
+      // The live Content AI API returns { metadata: { url } } with no
+      // "title"/"source" fields (those only exist in this block's mock
+      // fixture, mock-answer.json) — fall back to the URL as both the
+      // link target and the visible label instead of the raw hex hit id.
+      // Confirmed live 2026-08-11 (GRANITE-71249).
+      const href = meta.url || meta.source || '#';
       const link = document.createElement('a');
       link.className = 'cmp-content-ai-search__source-chip';
-      link.href = meta.source || '#';
+      link.href = href;
       link.target = '_blank';
       link.rel = 'noopener';
-      link.textContent = meta.title || hit.id || 'Source';
+      link.textContent = meta.title || href || hit.id || 'Source';
       sources.append(link);
     });
 

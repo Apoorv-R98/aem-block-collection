@@ -9,14 +9,14 @@ async function fetchMockAnswer() {
   return resp.json();
 }
 
-async function fetchSearchAnswer(baseUrl, contentSource, query) {
+async function fetchSearchAnswer(baseUrl, contentSource, contentSourceType, query) {
   const url = `${baseUrl}/adobe/experimental/aemcontentai-expires-20261231/contentAI/content-sources/gensearch`;
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contentSource: { name: contentSource, type: 'AEM_PUBLISH' },
-      query: { type: 'vector', text: query, options: {} },
+      contentSource: { name: contentSource, type: contentSourceType },
+      query,
     }),
   });
   if (!resp.ok) {
@@ -108,6 +108,7 @@ export default function decorate(block) {
   const disclaimerText = config['disclaimer-text'] || '';
   const baseUrl = config['base-url'] || '';
   const contentSource = config['content-source'] || '';
+  const contentSourceType = config['content-source-type'] || 'AEM_PUBLISH';
 
   block.innerHTML = '';
   block.classList.add('cmp-content-ai-search');
@@ -165,7 +166,7 @@ export default function decorate(block) {
     showLoading(summaryEl);
     try {
       const data = baseUrl
-        ? await fetchSearchAnswer(baseUrl, contentSource, query)
+        ? await fetchSearchAnswer(baseUrl, contentSource, contentSourceType, query)
         : await fetchMockAnswer();
       renderAnswer(summaryEl, data, disclaimerText);
     } catch (error) {

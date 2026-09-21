@@ -19,7 +19,7 @@ async function fetchMockResults() {
 }
 
 async function fetchSearchAnswer(baseUrl, contentSource, contentSourceType, query) {
-  const url = `${baseUrl}/adobe/experimental/aemcontentai-expires-20261231/contentAI/content-sources/gensearch`;
+  const url = `${baseUrl}/adobe/contentAI/content-sources/gensearch`;
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -33,7 +33,7 @@ async function fetchSearchAnswer(baseUrl, contentSource, contentSourceType, quer
 }
 
 async function fetchSearchResults(baseUrl, contentSource, contentSourceType, query, size, cursor) {
-  const url = `${baseUrl}/adobe/experimental/aemcontentai-expires-20261231/contentAI/content-sources/search`;
+  const url = `${baseUrl}/adobe/contentAI/content-sources/search`;
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

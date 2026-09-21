@@ -8,9 +8,9 @@ Frontend blocks for the EDS Semantic Search / Content AI Search initiative (Jira
 ## Blocks added in this fork
 
 - `blocks/semantic-search` — search input + result cards/list, currently backed by `mock-results.json`. Authoring fields: `Placeholder`, `Results Size`, `Results Layout` (`card`/`list`), `Id`.
-- `blocks/content-ai-search` — search input + generative-answer panel with source chips, currently backed by `mock-answer.json`. Authoring fields: `Placeholder`, `Gen Search Enabled By Default`, `Gen Search Toggle Visible`, `Gen Search Error Fallback`, `Disclaimer Text`, `Id`.
+- `blocks/content-ai-search` — search input + generative-answer panel with source chips, backed by `mock-answer.json` by default. Authoring fields: `Placeholder`, `Gen Search Enabled By Default`, `Gen Search Toggle Visible`, `Gen Search Error Fallback`, `Disclaimer Text`, `Base URL`, `Content Source`, `Id`.
 
-Both blocks are Phase 1 of a 3-phase plan (frontend / backend / integration) — see [GRANITE-71249](https://jira.corp.adobe.com/browse/GRANITE-71249) for the full design and current status. Neither block talks to a real backend yet; the mock JSON fixtures will be replaced with real Content AI-backed endpoints once the backend architecture (Phase 2) is decided.
+Both blocks are Phase 1 of a 3-phase plan (frontend / backend / integration) — see [GRANITE-71249](https://jira.corp.adobe.com/browse/GRANITE-71249) for the full design and current status. `semantic-search` doesn't talk to a real backend yet. `content-ai-search` can call a real Content AI-backed endpoint if `Base URL` and `Content Source` are authored on the block instance — otherwise it falls back to the mock fixture. `Base URL` must be the site's own CORS-enabled AEM publish custom domain (e.g. from a `cdn.yaml` CORS configuration per the Crosswalk backend architecture doc), not the raw `*.adobeaemcloud.com` host, and is site-specific — every site adopting this block needs its own.
 
 ## Documentation
 

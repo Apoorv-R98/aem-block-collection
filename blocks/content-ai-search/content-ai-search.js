@@ -9,6 +9,22 @@ async function fetchMockAnswer() {
   return resp.json();
 }
 
+async function fetchSearchAnswer(baseUrl, contentSource, query) {
+  const url = `${baseUrl}/adobe/experimental/aemcontentai-expires-20261231/contentAI/content-sources/gensearch`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contentSource: { name: contentSource, type: 'AEM_PUBLISH' },
+      query: { type: 'vector', text: query, options: {} },
+    }),
+  });
+  if (!resp.ok) {
+    throw new Error(`Content AI request failed: ${resp.status}`);
+  }
+  return resp.json();
+}
+
 function renderAnswer(container, data, disclaimerText) {
   container.innerHTML = '';
 
@@ -90,6 +106,8 @@ export default function decorate(block) {
   const errorFallback = config['gen-search-error-fallback']
     || 'Sorry, we could not generate an answer. Please try again.';
   const disclaimerText = config['disclaimer-text'] || '';
+  const baseUrl = config['base-url'] || '';
+  const contentSource = config['content-source'] || '';
 
   block.innerHTML = '';
   block.classList.add('cmp-content-ai-search');
@@ -146,7 +164,9 @@ export default function decorate(block) {
 
     showLoading(summaryEl);
     try {
-      const data = await fetchMockAnswer();
+      const data = baseUrl
+        ? await fetchSearchAnswer(baseUrl, contentSource, query)
+        : await fetchMockAnswer();
       renderAnswer(summaryEl, data, disclaimerText);
     } catch (error) {
       showError(summaryEl, errorFallback);

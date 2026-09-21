@@ -130,7 +130,7 @@ export default function decorate(block) {
   const aiSearchModeEnabled = config['ai-search-mode-enabled'] !== 'false';
   const genSearchErrorRetryVisible = config['gen-search-error-retry-visible'] !== 'false';
   const disclaimerText = config['disclaimer-text'] || '';
-  const baseUrl = config['base-url'] || '';
+  const baseUrl = (config['base-url'] || '').replace(/\/+$/, '');
   const contentSource = config['content-source'] || '';
   const contentSourceType = config['content-source-type'] || 'AEM_PUBLISH';
   const resultsSize = parseInt(config['results-size'], 10) || 10;

@@ -148,7 +148,7 @@ export default function decorate(block) {
   field.className = 'cmp-content-ai-search__field';
 
   const input = document.createElement('input');
-  input.type = 'search';
+  input.type = 'text';
   input.className = 'cmp-content-ai-search__input';
   input.placeholder = placeholder;
   input.setAttribute('aria-label', placeholder);
@@ -336,13 +336,16 @@ export default function decorate(block) {
 
   function renderResults() {
     resultsList.innerHTML = '';
+    resultsSection.hidden = false;
     if (!allResults.length) {
-      resultsSection.hidden = true;
+      const empty = document.createElement('p');
+      empty.className = 'cmp-content-ai-search__empty';
+      empty.textContent = 'No results found.';
+      resultsList.append(empty);
       loadMoreButton.hidden = true;
       return;
     }
     allResults.forEach((item) => resultsList.append(renderResultItem(item, resultsLayout)));
-    resultsSection.hidden = false;
     loadMoreButton.hidden = !nextCursor;
   }
 

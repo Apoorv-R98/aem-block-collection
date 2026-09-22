@@ -58,8 +58,31 @@ function resolveMetadataUrl(meta) {
   return (meta && (meta.url || meta.source)) || '';
 }
 
-// Content-AI-returned URLs are attacker-influenceable (crawled/indexed content), so a
-// javascript:/data: value must never reach an anchor href or img src unchallenged.
+function labelFromUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (!segments.length) return url;
+    const slug = decodeURIComponent(segments[segments.length - 1])
+      .replace(/\.(html?|php|aspx?)$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .trim();
+    if (!slug) return url;
+    return slug.replace(/\S+/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+  } catch (error) {
+    return url;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function isSafeUrl(url) {
   if (!url) return false;
   try {
@@ -70,12 +93,46 @@ function isSafeUrl(url) {
   }
 }
 
+function renderMarkdownInline(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => (
+    isSafeUrl(url) ? `<a href="${url}" target="_blank" rel="noopener">${label}</a>` : label
+  ));
+  return html;
+}
+
+function renderMarkdownSummary(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  let html = '';
+  let listOpen = false;
+  lines.forEach((line) => {
+    const trimmed = line.replace(/^\s+/, '');
+    if (/^[-*]\s+/.test(trimmed)) {
+      if (!listOpen) {
+        html += '<ul>';
+        listOpen = true;
+      }
+      html += `<li>${renderMarkdownInline(trimmed.replace(/^[-*]\s+/, ''))}</li>`;
+    } else {
+      if (listOpen) {
+        html += '</ul>';
+        listOpen = false;
+      }
+      if (trimmed.length > 0) html += `<p>${renderMarkdownInline(trimmed)}</p>`;
+    }
+  });
+  if (listOpen) html += '</ul>';
+  return html;
+}
+
 function renderResultItem(item, layout) {
-  const meta = item.metadata || {};
-  const title = meta.title || resolveMetadataUrl(meta) || item.id || 'Untitled';
+  const data = item.data || {};
+  const meta = data.metadata || {};
+  const url = data.source || resolveMetadataUrl(meta);
+  const title = meta.title || url || item.id || 'Untitled';
   const description = meta.description || '';
   const image = meta.image || '';
-  const url = resolveMetadataUrl(meta);
   const href = isSafeUrl(url) ? url : '#';
 
   const li = document.createElement('li');
@@ -118,7 +175,7 @@ function renderSourceChip(hit) {
   const meta = hit.metadata || {};
   const url = resolveMetadataUrl(meta);
   const safe = isSafeUrl(url);
-  const label = meta.title || url || hit.id || 'Source';
+  const label = meta.title || (url ? labelFromUrl(url) : '') || hit.id || 'Source';
 
   const li = document.createElement('li');
   const chip = document.createElement(safe ? 'a' : 'span');
@@ -247,7 +304,7 @@ export default function decorate(block) {
       + '<p class="cmp-content-ai-search__summary-attribution">Powered by Content AI</p>'
       + '</div>';
 
-    summaryText = document.createElement('p');
+    summaryText = document.createElement('div');
     summaryText.className = 'cmp-content-ai-search__summary-text';
 
     const sourcesSection = document.createElement('div');
@@ -439,7 +496,7 @@ export default function decorate(block) {
       setTimeout(() => {
         if (requestId !== genSearchRequestId) return;
         summaryLoading.hidden = true;
-        summaryText.textContent = data.result || '';
+        summaryText.innerHTML = renderMarkdownSummary(data.result || '');
         sourcesEl.innerHTML = '';
         (data.hits || []).forEach((hit) => sourcesEl.append(renderSourceChip(hit)));
         summaryEl.hidden = false;

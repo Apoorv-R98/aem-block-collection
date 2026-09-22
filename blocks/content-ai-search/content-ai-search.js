@@ -93,12 +93,26 @@ function isSafeUrl(url) {
   }
 }
 
+function linkifyBareUrls(html) {
+  return html.split(/(<a\b[^>]*>.*?<\/a>)/g).map((part) => {
+    if (/^<a\b/.test(part)) return part;
+    return part.replace(/https?:\/\/[^\s<]+/g, (url) => {
+      const trailingMatch = url.match(/[).,;:!?]+$/);
+      const trailing = trailingMatch ? trailingMatch[0] : '';
+      const cleanUrl = trailing ? url.slice(0, -trailing.length) : url;
+      if (!isSafeUrl(cleanUrl)) return url;
+      return `<a href="${cleanUrl}" target="_blank" rel="noopener">${cleanUrl}</a>${trailing}`;
+    });
+  }).join('');
+}
+
 function renderMarkdownInline(text) {
   let html = escapeHtml(text);
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => (
     isSafeUrl(url) ? `<a href="${url}" target="_blank" rel="noopener">${label}</a>` : label
   ));
+  html = linkifyBareUrls(html);
   return html;
 }
 

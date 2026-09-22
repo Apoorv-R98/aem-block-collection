@@ -44,6 +44,12 @@
   text-align: center;
 }
 
+.content-ai-search .cmp-content-ai-search__load-more-error {
+  margin: 1em 0 0;
+  color: #a33532;
+  text-align: center;
+}
+
 .content-ai-search .cmp-content-ai-search__tabs {
   display: flex;
   gap: 0.25em;

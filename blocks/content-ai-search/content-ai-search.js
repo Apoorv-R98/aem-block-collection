@@ -3,6 +3,7 @@ import { readBlockConfig } from '../../scripts/aem.js';
 const LOADING_DISPLAY_DELAY = 300;
 const TAB_RESULTS = 'search-results';
 const TAB_AI = 'ai-mode';
+const MAX_RESULTS_SIZE = 50;
 
 async function fetchMockAnswer() {
   const url = `${window.hlx.codeBasePath}/blocks/content-ai-search/mock-answer.json`;
@@ -53,13 +54,20 @@ function toggleShow(el, show) {
   else el.setAttribute('hidden', 'hidden');
 }
 
-function setCookie(name, value) {
-  const oneYearSeconds = 365 * 24 * 60 * 60;
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${oneYearSeconds}; SameSite=Lax; Secure`;
-}
-
 function resolveMetadataUrl(meta) {
   return (meta && (meta.url || meta.source)) || '';
+}
+
+// Content-AI-returned URLs are attacker-influenceable (crawled/indexed content), so a
+// javascript:/data: value must never reach an anchor href or img src unchallenged.
+function isSafeUrl(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch (error) {
+    return false;
+  }
 }
 
 function renderResultItem(item, layout) {
@@ -67,7 +75,8 @@ function renderResultItem(item, layout) {
   const title = meta.title || resolveMetadataUrl(meta) || item.id || 'Untitled';
   const description = meta.description || '';
   const image = meta.image || '';
-  const href = resolveMetadataUrl(meta) || '#';
+  const url = resolveMetadataUrl(meta);
+  const href = isSafeUrl(url) ? url : '#';
 
   const li = document.createElement('li');
   li.className = 'cmp-content-ai-search__item';
@@ -76,7 +85,7 @@ function renderResultItem(item, layout) {
   link.className = layout === 'list' ? 'cmp-content-ai-search__row' : 'cmp-content-ai-search__card';
   link.href = href;
 
-  if (image) {
+  if (image && isSafeUrl(image)) {
     const img = document.createElement('img');
     img.className = layout === 'list' ? 'cmp-content-ai-search__row-image' : 'cmp-content-ai-search__card-image';
     img.src = image;
@@ -107,15 +116,16 @@ function renderResultItem(item, layout) {
 
 function renderSourceChip(hit) {
   const meta = hit.metadata || {};
-  const href = resolveMetadataUrl(meta);
-  const label = meta.title || href || hit.id || 'Source';
+  const url = resolveMetadataUrl(meta);
+  const safe = isSafeUrl(url);
+  const label = meta.title || url || hit.id || 'Source';
 
   const li = document.createElement('li');
-  const chip = document.createElement(href ? 'a' : 'span');
+  const chip = document.createElement(safe ? 'a' : 'span');
   chip.className = 'cmp-content-ai-search__source-chip';
   chip.textContent = label;
-  if (href) {
-    chip.href = href;
+  if (safe) {
+    chip.href = url;
     chip.target = '_blank';
     chip.rel = 'noopener';
   }
@@ -133,12 +143,14 @@ export default function decorate(block) {
   const baseUrl = (config['base-url'] || '').replace(/\/+$/, '');
   const contentSource = config['content-source'] || '';
   const contentSourceType = config['content-source-type'] || 'AEM_PUBLISH';
-  const resultsSize = parseInt(config['results-size'], 10) || 10;
+  const resultsSize = Math.min(parseInt(config['results-size'], 10) || 10, MAX_RESULTS_SIZE);
   let resultsLayout = config['results-layout'] === 'list' ? 'list' : 'card';
 
   block.innerHTML = '';
   block.classList.add('cmp-content-ai-search', `cmp-content-ai-search--${resultsLayout}`);
   if (id) block.id = id;
+
+  const idPrefix = id || `content-ai-search-${Math.random().toString(36).slice(2, 8)}`;
 
   const form = document.createElement('form');
   form.className = 'cmp-content-ai-search__form';
@@ -182,24 +194,30 @@ export default function decorate(block) {
 
     tabResultsBtn = document.createElement('button');
     tabResultsBtn.type = 'button';
+    tabResultsBtn.id = `${idPrefix}-tab-results`;
     tabResultsBtn.setAttribute('role', 'tab');
     tabResultsBtn.className = 'cmp-content-ai-search__tab';
     tabResultsBtn.setAttribute('aria-selected', 'true');
+    tabResultsBtn.setAttribute('aria-controls', `${idPrefix}-panel-results`);
     tabResultsBtn.textContent = 'Search Results';
 
     tabAiBtn = document.createElement('button');
     tabAiBtn.type = 'button';
+    tabAiBtn.id = `${idPrefix}-tab-ai`;
     tabAiBtn.setAttribute('role', 'tab');
     tabAiBtn.className = 'cmp-content-ai-search__tab';
     tabAiBtn.setAttribute('aria-selected', 'false');
+    tabAiBtn.setAttribute('aria-controls', `${idPrefix}-panel-ai`);
     tabAiBtn.tabIndex = -1;
     tabAiBtn.textContent = 'AI Mode';
 
     tabs.append(tabResultsBtn, tabAiBtn);
 
     panelAi = document.createElement('div');
+    panelAi.id = `${idPrefix}-panel-ai`;
     panelAi.className = 'cmp-content-ai-search__panel';
     panelAi.setAttribute('role', 'tabpanel');
+    panelAi.setAttribute('aria-labelledby', tabAiBtn.id);
     panelAi.hidden = true;
 
     summaryLoading = document.createElement('div');
@@ -270,7 +288,11 @@ export default function decorate(block) {
 
   const panelResults = document.createElement('div');
   panelResults.className = 'cmp-content-ai-search__panel';
-  if (aiSearchModeEnabled) panelResults.setAttribute('role', 'tabpanel');
+  if (aiSearchModeEnabled) {
+    panelResults.id = `${idPrefix}-panel-results`;
+    panelResults.setAttribute('role', 'tabpanel');
+    panelResults.setAttribute('aria-labelledby', tabResultsBtn.id);
+  }
 
   const resultsSection = document.createElement('div');
   resultsSection.className = 'cmp-content-ai-search__results-section';
@@ -301,13 +323,18 @@ export default function decorate(block) {
   resultsList.className = 'cmp-content-ai-search__results';
   resultsList.setAttribute('aria-label', 'Search results');
 
+  const loadMoreError = document.createElement('p');
+  loadMoreError.className = 'cmp-content-ai-search__load-more-error';
+  loadMoreError.textContent = 'Could not load more results. Please try again.';
+  loadMoreError.hidden = true;
+
   const loadMoreButton = document.createElement('button');
   loadMoreButton.type = 'button';
   loadMoreButton.className = 'cmp-content-ai-search__load-more';
   loadMoreButton.textContent = 'Load more results';
   loadMoreButton.hidden = true;
 
-  resultsSection.append(resultsToolbar, resultsList, loadMoreButton);
+  resultsSection.append(resultsToolbar, resultsList, loadMoreError, loadMoreButton);
   panelResults.append(resultsSection);
 
   block.append(form);
@@ -334,13 +361,13 @@ export default function decorate(block) {
     block.classList.add(resultsLayout === 'list' ? 'cmp-content-ai-search--list' : 'cmp-content-ai-search--card');
   }
 
-  function renderResults() {
+  function renderResults(message) {
     resultsList.innerHTML = '';
     resultsSection.hidden = false;
     if (!allResults.length) {
       const empty = document.createElement('p');
       empty.className = 'cmp-content-ai-search__empty';
-      empty.textContent = 'No results found.';
+      empty.textContent = message || 'No results found.';
       resultsList.append(empty);
       loadMoreButton.hidden = true;
       return;
@@ -358,6 +385,7 @@ export default function decorate(block) {
     resultsList.innerHTML = '';
     resultsSection.hidden = true;
     loadMoreButton.hidden = true;
+    loadMoreError.hidden = true;
     if (summaryEl) summaryEl.hidden = true;
     if (summaryLoading) summaryLoading.hidden = true;
     if (errorEl) errorEl.hidden = true;
@@ -366,6 +394,7 @@ export default function decorate(block) {
   async function runResultsSearch(query, cursor, append) {
     resultsRequestId += 1;
     const requestId = resultsRequestId;
+    if (append) loadMoreError.hidden = true;
     try {
       const data = baseUrl
         ? await fetchSearchResults(
@@ -384,10 +413,12 @@ export default function decorate(block) {
       renderResults();
     } catch (error) {
       if (requestId !== resultsRequestId) return;
-      if (!append) {
+      if (append) {
+        loadMoreError.hidden = false;
+      } else {
         allResults = [];
         nextCursor = null;
-        renderResults();
+        renderResults('Something went wrong loading results. Please try again.');
       }
     }
   }
@@ -444,7 +475,6 @@ export default function decorate(block) {
     tabResultsBtn.tabIndex = showAi ? -1 : 0;
     toggleShow(panelAi, showAi);
     toggleShow(panelResults, !showAi);
-    setCookie('cmp-content-ai-search-tab', tab);
   }
 
   if (aiSearchModeEnabled) {

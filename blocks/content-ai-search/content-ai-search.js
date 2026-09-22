@@ -33,15 +33,20 @@ async function fetchSearchAnswer(baseUrl, contentSource, contentSourceType, quer
   return resp.json();
 }
 
-async function fetchSearchResults(baseUrl, contentSource, contentSourceType, query, size, cursor) {
+async function fetchSearchResults(baseUrl, contentSource, contentSourceType, query, limit, cursor) {
   const url = `${baseUrl}/adobe/contentAI/content-sources/search`;
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contentSource: { name: contentSource, type: contentSourceType },
-      query: { type: 'vector', text: query, options: { size } },
-      ...(cursor ? { cursor } : {}),
+      query: { type: 'vector', text: query, options: {} },
+      queryOptions: {
+        pagination: {
+          limit,
+          ...(cursor ? { cursor } : {}),
+        },
+      },
     }),
   });
   if (!resp.ok) throw new Error(`Content AI search failed: ${resp.status}`);

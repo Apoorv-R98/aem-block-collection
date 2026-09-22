@@ -479,8 +479,16 @@ export default function decorate(block) {
         : await fetchMockResults();
       if (requestId !== resultsRequestId) return;
       const results = data.results || [];
-      allResults = append ? allResults.concat(results) : results;
-      nextCursor = data.cursor || null;
+      if (append) {
+        const knownIds = new Set(allResults.map((item) => item.id));
+        const newResults = results.filter((item) => !knownIds.has(item.id));
+        allResults = allResults.concat(newResults);
+        const cursorAdvanced = data.cursor && data.cursor !== cursor;
+        nextCursor = (cursorAdvanced && newResults.length) ? data.cursor : null;
+      } else {
+        allResults = results;
+        nextCursor = data.cursor || null;
+      }
       renderResults();
     } catch (error) {
       if (requestId !== resultsRequestId) return;
